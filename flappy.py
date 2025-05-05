@@ -1,11 +1,13 @@
 import pygame
 from pygame.locals import *
 import random
+from population import *
+from individual import *
 
 pygame.init()
 
 clock = pygame.time.Clock()
-fps = 60
+fps = 120
 
 screen_width = 400
 screen_height = 600
@@ -21,14 +23,21 @@ white = (255, 255, 255)
 
 #define game variables
 ground_scroll = 0
-scroll_speed = 4
+time_alive = 0
+scroll_speed = 4 + int(time_alive/1)  # mỗi 800 frame tăng 1 đơn vị tốc độ
 flying = False
 game_over = False
-pipe_gap = 150
-pipe_frequency = 1500 #milliseconds
+pipe_gap = random.randint(180, 280)
+pipe_height = random.randint(-100, 100)
+pipe_frequency = int(random.randint(800, 1000) * (60 / fps))  # điều chỉnh theo tốc độ khung hình gốc
+
 last_pipe = pygame.time.get_ticks() - pipe_frequency
-score = 0
+max_score = 0
 pass_pipe = False
+
+generation = 0
+max_score_list = []
+
 
 #load images
 bg = pygame.image.load('img/bg.png')
@@ -41,16 +50,26 @@ def draw_text(text, font, text_col, x, y):
 	img = font.render(text, True, text_col)
 	screen.blit(img, (x, y))
 
-def reset_game():
+def reset_game(population):
+	global time_alive, max_score, last_pipe, generation
+	generation += 1
+	max_score_list.append(max_score)
+	print(max_score_list)
+	time_alive = 0
 	pipe_group.empty()
-	flappy.rect.x = 100
-	flappy.rect.y = int(screen_height / 2)
-	score = 0
-	return score
+	population.evolve()
+	for i in range(size_population):
+		individual = population.individuals[i]
+		bird = Bird(100, int(screen_height / random.randint(1, 10)))
+		bird.individual = individual
+		bird_group.add(bird)
+		bird_group.sprites()[i].score = 0
+
+	max_score = 0
+	return max_score
 
 
 class Bird(pygame.sprite.Sprite):
-
 	def __init__(self, x, y):
 		pygame.sprite.Sprite.__init__(self)
 		self.images = []
@@ -64,6 +83,12 @@ class Bird(pygame.sprite.Sprite):
 		self.rect.center = [x, y]
 		self.vel = 0
 		self.clicked = False
+		self.score = 0
+		self.jump = False
+		self.individual = None
+		self.mask = pygame.mask.from_surface(self.image)
+		self.passed_pipe = False
+		self.time_alive = 0
 
 	def update(self):
 
@@ -72,17 +97,19 @@ class Bird(pygame.sprite.Sprite):
 			self.vel += 0.6
 			if self.vel > 8:
 				self.vel = 8
-			if self.rect.bottom < 768:
+			if self.rect.bottom < 600:
 				self.rect.y += int(self.vel)
 
 		if game_over == False:
 			#jump
-			if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
+			if self.jump and not self.clicked:
 				self.clicked = True
 				self.vel = -10
-			if pygame.mouse.get_pressed()[0] == 0:
 				self.clicked = False
 
+			if not self.jump:
+				self.clicked = False  # cho phép nhảy lần sau nếu điều kiện đúng
+				
 			#handle the animation
 			flap_cooldown = 5
 			self.counter += 1
@@ -101,114 +128,156 @@ class Bird(pygame.sprite.Sprite):
 			#point the bird at the ground
 			self.image = pygame.transform.rotate(self.images[self.index], -90)
 
-
-
 class Pipe(pygame.sprite.Sprite):
-
 	def __init__(self, x, y, position):
 		pygame.sprite.Sprite.__init__(self)
 		self.image = pygame.image.load("img/pipe.png")
 		self.rect = self.image.get_rect()
-		#position variable determines if the pipe is coming from the bottom or top
-		#position 1 is from the top, -1 is from the bottom
+		self.base_y = y  # lưu vị trí gốc để dao động
+		self.oscillate_phase = random.uniform(0, 2 * np.pi)
+		self.position = position
+		self.speed = scroll_speed
 		if position == 1:
 			self.image = pygame.transform.flip(self.image, False, True)
 			self.rect.bottomleft = [x, y - int(pipe_gap / 2)]
 		elif position == -1:
 			self.rect.topleft = [x, y + int(pipe_gap / 2)]
 
-
 	def update(self):
-		self.rect.x -= scroll_speed
+		self.rect.x -= self.speed
+		# Dao động theo sin
+		offset = 20 * np.sin(pygame.time.get_ticks() / 500 + self.oscillate_phase)
+		if self.position == 1:
+			self.rect.bottom = self.base_y - int(pipe_gap / 2) + offset
+		else:
+			self.rect.top = self.base_y + int(pipe_gap / 2) + offset
+
 		if self.rect.right < 0:
 			self.kill()
 
 
-
-class Button():
-	def __init__(self, x, y, image):
-		self.image = image
-		self.rect = self.image.get_rect()
-		self.rect.topleft = (x, y)
-
-	def draw(self):
-		action = False
-
-		#get mouse position
-		pos = pygame.mouse.get_pos()
-
-		#check mouseover and clicked conditions
-		if self.rect.collidepoint(pos):
-			if pygame.mouse.get_pressed()[0] == 1:
-				action = True
-
-		#draw button
-		screen.blit(self.image, (self.rect.x, self.rect.y))
-
-		return action
-
-
+size_population = 10
+population = Population(size_population)
+bird = [None] * size_population
 
 pipe_group = pygame.sprite.Group()
 bird_group = pygame.sprite.Group()
 
-flappy = Bird(100, int(screen_height / 2))
-
-bird_group.add(flappy)
-
-
 #create restart button instance
-button = Button(screen_width // 2 - 50, screen_height // 2 - 100, button_img)
+for i in range(size_population):
+	individual = Individual()
+	population.individuals.append(individual)
+	bird[i] = Bird(100, int(screen_height / random.randint(1, 10)))
+	bird[i].individual = individual
+	bird_group.add(bird[i])
 
+def get_state(pipe_group, bird):
+    pipes_top = [p for p in pipe_group if p.position == 1]
+    pipes_bottom = [p for p in pipe_group if p.position == -1]
 
-def get_state(pipe_group, bird_group):
-	pile_list = list(pipe_group)
-	bird_list = list(bird_group)
-	x_0 = pile_list[1].rect.x - bird_list[0].rect.x
-	y_0 = pile_list[1].rect.y - bird_list[0].rect.y
-	v = bird_list[0].vel
-	return x_0, y_0, v
+	# Nếu chưa có đủ pipe → trả về mặc định
+    if not pipes_top or not pipes_bottom:
+        return [bird.rect.centery, 0, 0, screen_width, 0, 0, 0, bird.vel]
+
+    # Ống gần nhất
+    next_top = next((p for p in pipes_top if p.rect.right > bird.rect.left), pipes_top[0])
+    next_bottom = next((p for p in pipes_bottom if p.rect.right > bird.rect.left), pipes_bottom[0])
+
+    bird_y = bird.rect.centery
+    dy_bottom = next_bottom.rect.top - bird.rect.centery
+    dy_top = bird.rect.centery - next_top.rect.bottom
+    dx_pipe = next_top.rect.centerx - bird.rect.centerx
+    velocity = bird.vel
+
+    if len(pipes_top) < 2 or len(pipes_bottom) < 2:
+        return [bird_y, dy_bottom, dy_top, dx_pipe, 0, 0, 0, velocity]  # thêm y1 mặc định = 0
+
+    # Ống thứ hai
+    second_top = next((p for p in pipes_top if p.rect.right > next_top.rect.right), next_top)
+    second_bottom = next((p for p in pipes_bottom if p.rect.right > next_bottom.rect.right), next_bottom)
+
+    # Đặc trưng y1: khoảng cách dọc giữa chim và ống thứ hai
+    dy_bottom_1 = second_bottom.rect.top - bird.rect.centery
+    dy_top_1 = bird.rect.centery - second_top.rect.bottom
+    dx_pipe_1 = second_top.rect.centerx - bird.rect.centerx
+
+    return [bird_y, dy_bottom, dy_top, dx_pipe, dy_bottom_1, dy_top_1, dx_pipe_1, velocity]
+
+def draw_chart(surface, scores, origin_x):
+    if not scores:
+        return
+    max_val = max(scores)
+    chart_height = 300
+    chart_top = 50
+    bar_width = 8
+    for i, score in enumerate(scores[-20:]):  # Vẽ 20 thế hệ gần nhất
+        bar_height = int((score / max_val) * chart_height) if max_val > 0 else 0
+        x = origin_x + i * (bar_width + 2)
+        y = screen_height - chart_height - chart_top + (chart_height - bar_height)
+        pygame.draw.rect(surface, (100, 200, 250), (x, y, bar_width, bar_height))
+
 
 run = True
 while run:
-	clock.tick(fps)
 
+	clock.tick(fps)
 	#draw background
 	screen.blit(bg, (0,0))
 
 	pipe_group.draw(screen)
 	bird_group.draw(screen)
-	bird_group.update()
-	# bird_list = list(bird_group)
-	# pygame.draw.circle(screen, (255, 0, 0), (bird_list[0].rect.x, bird_list[0].rect.y), 5)
 
 	#draw and scroll the ground
-	screen.blit(ground_img, (ground_scroll, 768))
+	screen.blit(ground_img, (ground_scroll, 600))
 
 	#check the score
-	if len(pipe_group) > 0:
-		if bird_group.sprites()[0].rect.left > pipe_group.sprites()[0].rect.left\
-			and bird_group.sprites()[0].rect.right < pipe_group.sprites()[0].rect.right\
-			and pass_pipe == False:
-			pass_pipe = True
-		if pass_pipe == True:
-			if bird_group.sprites()[0].rect.left > pipe_group.sprites()[0].rect.right:
-				score += 1
-				pass_pipe = False
-	draw_text(str(score), font, white, int(screen_width / 2), 20)
+	for i in range(len(bird_group)):
+		if len(pipe_group) > 0:
+			if bird_group.sprites()[i].rect.left > pipe_group.sprites()[0].rect.left\
+				and bird_group.sprites()[i].rect.right < pipe_group.sprites()[0].rect.right\
+				and bird_group.sprites()[i].passed_pipe == False:
+				bird_group.sprites()[i].passed_pipe = True
+			if bird_group.sprites()[i].passed_pipe == True:
+				if bird_group.sprites()[i].rect.left > pipe_group.sprites()[0].rect.right:
+					bird_group.sprites()[i].score += 1
+					# bird_group.sprites()[i].individual.evaluate_fitness(bird_group.sprites()[i].score)
+					bird_group.sprites()[i].passed_pipe = False
 
+	for i in range(len(bird_group)):
+		if bird_group.sprites()[i].score > max_score:
+			max_score = bird_group.sprites()[i].score
+	
+	draw_text(str(max_score), font, white, int(screen_width / 2), 20)
+	# draw_text(f"Gen {generation}", pygame.font.SysFont('Arial', 24), white, 430, 20)
+
+	for i in range(len(bird_group)):
+		inputs = get_state(pipe_group, bird_group.sprites()[i])
+		# print(inputs)
+		prediction = bird_group.sprites()[i].individual.neural_network.predict(inputs)
+		bird_group.sprites()[i].jump = bool(prediction)
 
 	#look for collision
-	if pygame.sprite.groupcollide(bird_group, pipe_group, False, False) or flappy.rect.top < 0:
-		game_over = True
+	bird_pipe_collision = pygame.sprite.groupcollide(bird_group, pipe_group, False, False, collided=pygame.sprite.collide_mask)
+	for flappy in bird_pipe_collision:
+		flappy.individual.evaluate_fitness(time_alive)
+		flappy.kill()
 
-	#once the bird has hit the ground it's game over and no longer flying
-	if flappy.rect.bottom >= 768:
+	#once the  bird has hit the ground it's game over and no longer flying
+	for flappy in bird_group:
+		if flappy.rect.bottom >= 600:
+			flappy.individual.evaluate_fitness(time_alive)
+			flappy.kill()
+		if flappy.rect.top <= 0:
+			flappy.individual.evaluate_fitness(time_alive)
+			flappy.kill()
+			
+	if len(bird_group) == 0:
 		game_over = True
 		flying = False
 
 
 	if flying == True and game_over == False:
+		time_alive += 1
 		#generate new pipes
 		time_now = pygame.time.get_ticks()
 		if time_now - last_pipe > pipe_frequency:
@@ -218,12 +287,9 @@ while run:
 			pipe_group.add(btm_pipe)
 			pipe_group.add(top_pipe)
 			last_pipe = time_now
-		# pile_list = list(pipe_group)
-		# pygame.draw.circle(screen, (255, 0, 0), (pile_list[0].rect.x, pile_list[0].rect.y), 5)
-
-		print(get_state(pipe_group, bird_group))
 
 		pipe_group.update()
+		bird_group.update()
 
 		ground_scroll -= scroll_speed
 		if abs(ground_scroll) > 35:
@@ -231,15 +297,15 @@ while run:
 
 	#check for game over and reset
 	if game_over == True:
-		if button.draw():
-			game_over = False
-			score = reset_game()
+		game_over = False
+		score = reset_game(population)
+		flying = True   # Tự động tiếp tục mà không cần di chuột
 
 
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			run = False
-		if event.type == pygame.MOUSEBUTTONDOWN and flying == False and game_over == False:
+		if flying == False and game_over == False:
 			flying = True
 
 	pygame.display.flip()
