@@ -29,7 +29,7 @@ flying = False
 game_over = False
 pipe_gap = random.randint(180, 280)
 pipe_height = random.randint(-100, 100)
-pipe_frequency = int(random.randint(800, 1000) * (60 / fps))  # điều chỉnh theo tốc độ khung hình gốc
+pipe_frequency = int(random.randint(1000, 1500) * (60 / fps))  # điều chỉnh theo tốc độ khung hình gốc
 
 last_pipe = pygame.time.get_ticks() - pipe_frequency
 max_score = 0
@@ -50,7 +50,7 @@ def draw_text(text, font, text_col, x, y):
 	img = font.render(text, True, text_col)
 	screen.blit(img, (x, y))
 
-def reset_game(population):
+def reset_game(population): 
 	global time_alive, max_score, last_pipe, generation
 	generation += 1
 	max_score_list.append(max_score)
@@ -146,7 +146,8 @@ class Pipe(pygame.sprite.Sprite):
 	def update(self):
 		self.rect.x -= self.speed
 		# Dao động theo sin
-		offset = 20 * np.sin(pygame.time.get_ticks() / 500 + self.oscillate_phase)
+		# offset = 20 * np.sin(pygame.time.get_ticks() / 500 + self.oscillate_phase)
+		offset = 0
 		if self.position == 1:
 			self.rect.bottom = self.base_y - int(pipe_gap / 2) + offset
 		else:
@@ -177,7 +178,7 @@ def get_state(pipe_group, bird):
 
 	# Nếu chưa có đủ pipe → trả về mặc định
     if not pipes_top or not pipes_bottom:
-        return [bird.rect.centery, 0, 0, screen_width, 0, 0, 0, bird.vel]
+        return [bird.rect.centery, 0, 0, screen_width, bird.vel]
 
     # Ống gần nhất
     next_top = next((p for p in pipes_top if p.rect.right > bird.rect.left), pipes_top[0])
@@ -190,7 +191,7 @@ def get_state(pipe_group, bird):
     velocity = bird.vel
 
     if len(pipes_top) < 2 or len(pipes_bottom) < 2:
-        return [bird_y, dy_bottom, dy_top, dx_pipe, 0, 0, 0, velocity]  # thêm y1 mặc định = 0
+        return [bird_y, dy_bottom, dy_top, dx_pipe, velocity]  # thêm y1 mặc định = 0
 
     # Ống thứ hai
     second_top = next((p for p in pipes_top if p.rect.right > next_top.rect.right), next_top)
@@ -201,21 +202,7 @@ def get_state(pipe_group, bird):
     dy_top_1 = bird.rect.centery - second_top.rect.bottom
     dx_pipe_1 = second_top.rect.centerx - bird.rect.centerx
 
-    return [bird_y, dy_bottom, dy_top, dx_pipe, dy_bottom_1, dy_top_1, dx_pipe_1, velocity]
-
-def draw_chart(surface, scores, origin_x):
-    if not scores:
-        return
-    max_val = max(scores)
-    chart_height = 300
-    chart_top = 50
-    bar_width = 8
-    for i, score in enumerate(scores[-20:]):  # Vẽ 20 thế hệ gần nhất
-        bar_height = int((score / max_val) * chart_height) if max_val > 0 else 0
-        x = origin_x + i * (bar_width + 2)
-        y = screen_height - chart_height - chart_top + (chart_height - bar_height)
-        pygame.draw.rect(surface, (100, 200, 250), (x, y, bar_width, bar_height))
-
+    return [bird_y, dy_bottom, dy_top, dx_pipe, velocity]
 
 run = True
 while run:
@@ -259,16 +246,16 @@ while run:
 	#look for collision
 	bird_pipe_collision = pygame.sprite.groupcollide(bird_group, pipe_group, False, False, collided=pygame.sprite.collide_mask)
 	for flappy in bird_pipe_collision:
-		flappy.individual.evaluate_fitness(time_alive)
+		flappy.individual.evaluate_fitness(time_alive + flappy.score * 100)
 		flappy.kill()
 
 	#once the  bird has hit the ground it's game over and no longer flying
 	for flappy in bird_group:
 		if flappy.rect.bottom >= 600:
-			flappy.individual.evaluate_fitness(time_alive)
+			flappy.individual.evaluate_fitness(time_alive + flappy.score * 100)
 			flappy.kill()
 		if flappy.rect.top <= 0:
-			flappy.individual.evaluate_fitness(time_alive)
+			flappy.individual.evaluate_fitness(time_alive + flappy.score * 100)
 			flappy.kill()
 			
 	if len(bird_group) == 0:

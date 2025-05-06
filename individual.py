@@ -2,8 +2,8 @@ import random
 from neural_network import *  # Giả sử bạn đã có NeuralNetwork như ở trên
 
 class Individual:
-    def __init__(self, genome=None, hidden_size=5):
-        self.input_size = 9  # 6 đặc trưng + 1 bias
+    def __init__(self, genome=None, hidden_size=4):
+        self.input_size = 6  # 6 đặc trưng + 1 bias
         self.hidden_size = hidden_size
         self.output_size = 1
 

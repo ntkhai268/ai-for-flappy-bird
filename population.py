@@ -33,7 +33,7 @@ class Population:
         """
         Đột biến các cá thể trong quần thể.
         """
-        mutation_rate = 0.1
+        mutation_rate = 0.5
         for individual in self.individuals:
             if random.random() < mutation_rate:
                 mutation_point = random.randint(0, len(individual.genome) - 1)
@@ -46,6 +46,7 @@ class Population:
         """
         # Elitism: giữ lại cá thể tốt nhất
         best = max(self.individuals, key=lambda x: x.fitness)
+        print(best.fitness)
 
         selected = self.select()
         new_individuals = []
