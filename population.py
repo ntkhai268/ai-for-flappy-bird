@@ -8,7 +8,7 @@ class Population:
         """
         self.size = size
         self.individuals = []  # Danh sách các cá thể
-        self.generation = 0  # Thế hệ hiện tại
+        self.generation = 0  # Thế hệ hiện tạo
 
     def select(self):
         """
@@ -35,7 +35,7 @@ class Population:
         """
         mutation_rate = 0.5
         for individual in self.individuals:
-            if random.random() < mutation_rate:
+            if random.random() < mutation_rate and individual.fitness == 0: # chỉ đột biến thế hệ sau (các cá thể mới)
                 mutation_point = random.randint(0, len(individual.genome) - 1)
                 individual.genome[mutation_point] = random.uniform(-1, 1)
                 individual.neural_network = NeuralNetwork(individual.genome)
@@ -45,14 +45,11 @@ class Population:
         Tiến hóa quần thể qua các bước: elitism, chọn lọc, lai ghép, đột biến.
         """
         # Elitism: giữ lại cá thể tốt nhất
-        best = max(self.individuals, key=lambda x: x.fitness)
-        print(best.fitness)
-
         selected = self.select()
-        new_individuals = []
+        new_individuals = selected
 
         # Lai ghép theo cặp
-        for i in range(0, len(selected) - 1, 2):
+        for i in range(0, len(selected), 2):
             parent1 = selected[i]
             parent2 = selected[i + 1]
             child1, child2 = self.crossover(parent1, parent2)
@@ -64,6 +61,6 @@ class Population:
             new_individuals.append(Individual(clone.genome.copy()))
 
         # Cập nhật quần thể: giữ lại cá thể tốt nhất + phần còn lại
-        self.individuals = [best] + new_individuals
+        self.individuals = new_individuals
         self.mutate()
         self.generation += 1

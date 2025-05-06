@@ -1,7 +1,7 @@
 import numpy as np
 
 class NeuralNetwork:
-    def __init__(self, weights: list[float], hidden_size: int = 4):
+    def __init__(self, weights: list[float], hidden_size: int = 5):
         self.hidden_size = hidden_size
         self.input_size = 6  # 8 đặc trưng + 1 bias
         self.output_size = 1
