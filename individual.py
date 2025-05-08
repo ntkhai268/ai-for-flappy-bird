@@ -1,21 +1,24 @@
-import random
-from neural_network import *  # Giả sử bạn đã có NeuralNetwork như ở trên
+from neural_network import NeuralNetwork
+import numpy as np
 
 class Individual:
-    def __init__(self, genome=None, hidden_size=5):
-        self.input_size = 6 # 6 đặc trưng + 1 bias
-        self.hidden_size = hidden_size
-        self.output_size = 1
-
-        self.total_weights = self.input_size * self.hidden_size + self.hidden_size * self.output_size
-
-        if genome is None:
-            self.genome = [random.uniform(-1, 1) for _ in range(self.total_weights)]
-        else:
-            self.genome = genome
-
+    def __init__(self, input_size):
+        self.brain = NeuralNetwork(input_size)
         self.fitness = 0
-        self.neural_network = NeuralNetwork(self.genome, hidden_size=self.hidden_size)
+        self.score = 0
+        self.survival_time = 0
+        self.is_alive = True
 
-    def evaluate_fitness(self, score):
-        self.fitness = score
+    def clone(self):
+        clone = Individual(self.brain.input_size)
+        clone.brain = self.brain.clone()
+        clone.score = self.score
+        clone.survival_time = self.survival_time
+        clone.fitness = self.fitness
+        return clone
+
+    def mutate(self, mutation_rate=0.1):
+        self.brain.mutate(mutation_rate)
+
+    def calculate_fitness(self):
+        self.fitness = max(1, self.score * 100 + self.survival_time)

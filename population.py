@@ -1,66 +1,31 @@
-from individual import *
+from individual import Individual
 import random
 
 class Population:
-    def __init__(self, size):
-        """
-        Khởi tạo một quần thể với số lượng cá thể nhất định.
-        """
+    def __init__(self, size, input_size):
         self.size = size
-        self.individuals = []  # Danh sách các cá thể
-        self.generation = 0  # Thế hệ hiện tạo
-
-    def select(self):
-        """
-        Chọn lọc các cá thể tốt nhất để tạo ra thế hệ tiếp theo.
-        """
-        sorted_individuals = sorted(self.individuals, key=lambda x: x.fitness, reverse=True)
-        selected_individuals = sorted_individuals[:self.size // 2]
-        return selected_individuals
-
-    def crossover(self, parent1, parent2):
-        """
-        Lai ghép các cá thể để tạo ra cá thể mới.
-        """
-        crossover_point = random.randint(0, len(parent1.genome) - 1)
-        genome1 = parent1.genome[:crossover_point] + parent2.genome[crossover_point:]
-        genome2 = parent2.genome[:crossover_point] + parent1.genome[crossover_point:]
-        child1 = Individual(genome1)
-        child2 = Individual(genome2)
-        return child1, child2
-
-    def mutate(self):
-        """
-        Đột biến các cá thể trong quần thể.
-        """
-        mutation_rate = 0.5
-        for individual in self.individuals:
-            if random.random() < mutation_rate and individual.fitness == 0: # chỉ đột biến thế hệ sau (các cá thể mới)
-                mutation_point = random.randint(0, len(individual.genome) - 1)
-                individual.genome[mutation_point] = random.uniform(-1, 1)
-                individual.neural_network = NeuralNetwork(individual.genome)
+        self.input_size = input_size
+        self.individuals = [Individual(input_size) for _ in range(size)]
+        self.generation = 1
 
     def evolve(self):
-        """
-        Tiến hóa quần thể qua các bước: elitism, chọn lọc, lai ghép, đột biến.
-        """
-        # Elitism: giữ lại cá thể tốt nhất
-        selected = self.select()
-        new_individuals = selected
+        for ind in self.individuals:
+            ind.calculate_fitness()
 
-        # Lai ghép theo cặp
-        for i in range(0, len(selected), 2):
-            parent1 = selected[i]
-            parent2 = selected[i + 1]
-            child1, child2 = self.crossover(parent1, parent2)
-            new_individuals.extend([child1, child2])
+        self.individuals.sort(key=lambda x: x.fitness, reverse=True)
+        # Lấy 2 cá thể ưu tú nhất
+        elite1, elite2 = self.individuals[:2]
 
-        # Bổ sung thêm cá thể để đủ số lượng
-        while len(new_individuals) < self.size - 1:
-            clone = random.choice(selected)
-            new_individuals.append(Individual(clone.genome.copy()))
+        
+        # Giữ lại 2 cá thể ưu tú nhất
+        children = [elite1.clone(), elite2.clone()]
+        
+        # Tạo các cá thể con từ 2 cá thể ưu tú
+        while len(children) < self.size:
+            # Chọn ngẫu nhiên một trong hai cá thể ưu tú làm bố mẹ
+            parent = random.choice([elite1, elite2]).clone()
+            parent.mutate(mutation_rate=0.1)
+            children.append(parent)
 
-        # Cập nhật quần thể: giữ lại cá thể tốt nhất + phần còn lại
-        self.individuals = new_individuals
-        self.mutate()
+        self.individuals = children
         self.generation += 1

@@ -1,24 +1,39 @@
 import numpy as np
 
 class NeuralNetwork:
-    def __init__(self, weights: list[float], hidden_size: int = 5):
+    def __init__(self, input_size, hidden_size=6, output_size=1):
+        self.input_size = input_size
         self.hidden_size = hidden_size
-        self.input_size = 6  # 8 đặc trưng + 1 bias
-        self.output_size = 1
+        self.output_size = output_size
 
-        # Tách trọng số thành 2 phần:
-        # 1. input → hidden (6 × hidden_size)
-        # 2. hidden → output (hidden_size)
-        split = self.input_size * self.hidden_size
-        self.w1 = np.array(weights[:split]).reshape((self.input_size, self.hidden_size))
-        self.w2 = np.array(weights[split:split + self.hidden_size]).reshape((self.hidden_size, self.output_size))
+        self.W1 = np.random.randn(self.input_size, self.hidden_size)
+        self.b1 = np.zeros((1, self.hidden_size))
+        self.W2 = np.random.randn(self.hidden_size, self.output_size)
+        self.b2 = np.zeros((1, self.output_size))
 
-    def activate(self, x):
-        return 1 / (1 + np.exp(-x))  # sigmoid
+    def clone(self):
+        clone = NeuralNetwork(self.input_size, self.hidden_size, self.output_size)
+        clone.W1 = np.copy(self.W1)
+        clone.b1 = np.copy(self.b1)
+        clone.W2 = np.copy(self.W2)
+        clone.b2 = np.copy(self.b2)
+        return clone
 
-    def predict(self, inputs):
-        # Thêm bias vào đầu vào
-        inputs = np.array(inputs + [1.0])  # bias
-        h = self.activate(np.dot(inputs, self.w1))       # lớp ẩn
-        output = self.activate(np.dot(h, self.w2))       # lớp output
-        return output[0] > 0.5  # chim nhảy nếu xác suất cao
+    def mutate(self, mutation_rate=0.1):
+        self.W1 += np.random.randn(*self.W1.shape) * mutation_rate
+        self.b1 += np.random.randn(*self.b1.shape) * mutation_rate
+        self.W2 += np.random.randn(*self.W2.shape) * mutation_rate
+        self.b2 += np.random.randn(*self.b2.shape) * mutation_rate
+
+    def predict(self, X):
+        z1 = np.dot(X, self.W1) + self.b1
+        a1 = self.relu(z1)
+        z2 = np.dot(a1, self.W2) + self.b2
+        a2 = self.sigmoid(z2)
+        return a2[0][0]
+
+    def relu(self, x):
+        return np.maximum(0, x)
+
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
