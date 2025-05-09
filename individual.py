@@ -11,7 +11,11 @@ class Individual:
 
     def clone(self):
         clone = Individual(self.brain.input_size)
-        clone.brain = self.brain.clone()
+        clone.brain = NeuralNetwork(self.brain.input_size)
+        clone.brain.W1 = np.copy(self.brain.W1)
+        clone.brain.b1 = np.copy(self.brain.b1)
+        clone.brain.W2 = np.copy(self.brain.W2)
+        clone.brain.b2 = np.copy(self.brain.b2)
         clone.score = self.score
         clone.survival_time = self.survival_time
         clone.fitness = self.fitness

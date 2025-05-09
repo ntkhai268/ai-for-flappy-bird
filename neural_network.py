@@ -11,15 +11,7 @@ class NeuralNetwork:
         self.W2 = np.random.randn(self.hidden_size, self.output_size)
         self.b2 = np.zeros((1, self.output_size))
 
-    def clone(self):
-        clone = NeuralNetwork(self.input_size, self.hidden_size, self.output_size)
-        clone.W1 = np.copy(self.W1)
-        clone.b1 = np.copy(self.b1)
-        clone.W2 = np.copy(self.W2)
-        clone.b2 = np.copy(self.b2)
-        return clone
 
-  
     def predict(self, X):
         z1 = np.dot(X, self.W1) + self.b1
         a1 = self.relu(z1)
