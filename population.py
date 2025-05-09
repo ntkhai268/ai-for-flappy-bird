@@ -19,7 +19,10 @@ class Population:
         
         # Giữ lại 2 cá thể ưu tú nhất
         children = [elite1.clone(), elite2.clone()]
-        
+        print(f"[Gen {self.generation}] Max fitness: {elite1.fitness} | Score: {elite1.score}, Time: {elite1.survival_time}")
+        print(f"[Gen {self.generation}] Second best fitness: {elite2.fitness} | Score: {elite2.score}, Time: {elite2.survival_time}")
+
+
         # Tạo các cá thể con từ 2 cá thể ưu tú
         while len(children) < self.size:
             # Chọn ngẫu nhiên một trong hai cá thể ưu tú làm bố mẹ

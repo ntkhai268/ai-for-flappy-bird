@@ -18,7 +18,10 @@ class Individual:
         return clone
 
     def mutate(self, mutation_rate=0.1):
-        self.brain.mutate(mutation_rate)
+        self.brain.W1 += np.random.randn(*self.brain.W1.shape) * mutation_rate
+        self.brain.b1 += np.random.randn(*self.brain.b1.shape) * mutation_rate
+        self.brain.W2 += np.random.randn(*self.brain.W2.shape) * mutation_rate
+        self.brain.b2 += np.random.randn(*self.brain.b2.shape) * mutation_rate
 
     def calculate_fitness(self):
         self.fitness = max(1, self.score * 100 + self.survival_time)

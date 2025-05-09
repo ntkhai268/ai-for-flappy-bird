@@ -19,12 +19,7 @@ class NeuralNetwork:
         clone.b2 = np.copy(self.b2)
         return clone
 
-    def mutate(self, mutation_rate=0.1):
-        self.W1 += np.random.randn(*self.W1.shape) * mutation_rate
-        self.b1 += np.random.randn(*self.b1.shape) * mutation_rate
-        self.W2 += np.random.randn(*self.W2.shape) * mutation_rate
-        self.b2 += np.random.randn(*self.b2.shape) * mutation_rate
-
+  
     def predict(self, X):
         z1 = np.dot(X, self.W1) + self.b1
         a1 = self.relu(z1)
