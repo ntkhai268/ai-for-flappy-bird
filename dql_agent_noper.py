@@ -6,27 +6,39 @@ import numpy as np
 from collections import deque
 
 # Neural network cho DQN
-# class DQN(nn.Module):
-#     def __init__(self, input_dim, output_dim):
-#         super(DQN, self).__init__()
-#         self.fc1 = nn.Linear(input_dim, 5)
-#         # self.fc2 = nn.Linear(32, 32)
-#         self.fc2 = nn.Linear(5, output_dim)
-
-#     def forward(self, x):
-#         x = torch.relu(self.fc1(x))
-#         # x = torch.relu(self.fc2(x))
-#         return self.fc2(x)
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 32)
-        self.fc2 = nn.Linear(32, 32)
-        self.fc3 = nn.Linear(32, output_dim)
+        self.fc1 = nn.Linear(input_dim, 5)
+        # self.fc2 = nn.Linear(32, 32)
+        self.fc2 = nn.Linear(5, output_dim)
+        # for m in self.modules():
+        #     if isinstance(m, nn.Linear):
+        #         nn.init.kaiming_uniform_(m.weight, nonlinearity='relu')
+        #         nn.init.constant_(m.bias, 0)
+
     def forward(self, x):
         x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        return self.fc3(x)
+        # x = torch.relu(self.fc2(x))
+        return self.fc2(x)
+
+# class DQN(nn.Module):
+#     def __init__(self, input_dim=5, hidden_dim=32, output_dim=2):
+#         super(DQN, self).__init__()
+#         self.fc1 = nn.Linear(input_dim, hidden_dim)     # 5 -> 32
+#         self.fc2 = nn.Linear(hidden_dim, hidden_dim)    # 32 -> 32
+#         self.fc3 = nn.Linear(hidden_dim, output_dim)    # 32 -> 2
+#         for m in self.modules():
+#             if isinstance(m, nn.Linear):
+#                 nn.init.kaiming_uniform_(m.weight, nonlinearity='relu')
+#                 nn.init.constant_(m.bias, 0)
+
+#     def forward(self, x):
+#         x = torch.relu(self.fc1(x))  
+#         x = torch.relu(self.fc2(x))   
+#         x = self.fc3(x)          
+#         return x
+
 
 # Agent sử dụng PyTorch
 class DQNAgent:
@@ -36,11 +48,11 @@ class DQNAgent:
 
         self.replay_buffer = deque(maxlen=10000)
         self.gamma = 0.99
-        self.epsilon = 1.0
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 0.99
+        self.epsilon = 0.1  # Giảm từ 1.0
+        self.epsilon_min = 0.02  # Giảm từ 0.1
+        self.epsilon_decay = 0.995  # Giảm từ 0.9998
         self.learning_rate = 0.001
-        self.update_targetnn_rate = 1000
+        self.update_targetnn_rate = 100  # Giảm từ 200
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -83,6 +95,7 @@ class DQNAgent:
 
         self.optimizer.zero_grad()
         loss.backward()
+        nn.utils.clip_grad_norm_(self.main_network.parameters(), max_norm=1.0)
         self.optimizer.step()
 
         self.train_steps += 1
@@ -100,3 +113,7 @@ class DQNAgent:
         with torch.no_grad():
             q_values = self.main_network(state_tensor)
         return torch.argmax(q_values).item()
+
+    def save_model(self, filename):
+        torch.save(self.main_network.state_dict(), filename)
+        print(f"Model saved to {filename}")

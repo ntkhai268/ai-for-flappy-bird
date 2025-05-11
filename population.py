@@ -30,15 +30,26 @@ class Population:
         return child1, child2
 
     def mutate(self):
-        """
-        Đột biến các cá thể trong quần thể.
-        """
-        mutation_rate = 0.5
-        for individual in self.individuals:
-            if random.random() < mutation_rate and individual.fitness == 0: # chỉ đột biến thế hệ sau (các cá thể mới)
+        if not self.individuals:
+            return
+
+        # Xếp hạng theo fitness
+        sorted_individuals = sorted(self.individuals, key=lambda x: x.fitness, reverse=True)
+        n = len(sorted_individuals)
+
+        for i, individual in enumerate(sorted_individuals):
+            if i < n * 0.25:  # top 25%
+                mutation_rate = 0.1
+            elif i > n * 0.75:  # bottom 25%
+                mutation_rate = 0.6
+            else:  # còn lại
+                mutation_rate = 0.3
+
+            if random.random() < mutation_rate:
                 mutation_point = random.randint(0, len(individual.genome) - 1)
                 individual.genome[mutation_point] = random.uniform(-1, 1)
                 individual.neural_network = NeuralNetwork(individual.genome)
+
 
     def evolve(self):
         """

@@ -4,19 +4,30 @@ import torch.optim as optim
 import random
 import numpy as np
 from collections import deque
+import os
 
 # class DQN(nn.Module):
-#     def __init__(self, input_dim, output_dim):
+#     def __init__(self, input_dim, output_dim, hidden_size: int = 64):
 #         super(DQN, self).__init__()
-#         self.fc1 = nn.Linear(input_dim, 32)
-#         self.fc2 = nn.Linear(32, 32)
-#         self.fc3 = nn.Linear(32, output_dim)
+#         self.input_dim = input_dim
+#         self.hidden_size = hidden_size
+#         self.output_dim = output_dim
+
+#         self.fc1 = nn.Linear(input_dim, hidden_size)
+#         self.fc2 = nn.Linear(hidden_size, hidden_size)
+#         self.fc3 = nn.Linear(hidden_size, output_dim)
+
+#         # Khởi tạo trọng số
+#         for m in self.modules():
+#             if isinstance(m, nn.Linear):
+#                 nn.init.uniform_(m.weight, -0.01, 0.01)
+#                 nn.init.constant_(m.bias, 0)
+
 #     def forward(self, x):
 #         x = torch.relu(self.fc1(x))
 #         x = torch.relu(self.fc2(x))
 #         return self.fc3(x)
 
-# Neural network cho DQN
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_size: int = 5):
         super(DQN, self).__init__()
@@ -24,22 +35,15 @@ class DQN(nn.Module):
         self.hidden_size = hidden_size
         self.output_dim = output_dim
 
-        # Khởi tạo các tầng tuyến tính
         self.fc1 = nn.Linear(input_dim, hidden_size)
         self.fc2 = nn.Linear(hidden_size, output_dim)
-        total_weights = self.input_dim * self.hidden_size + self.hidden_size * self.output_dim
-        weights = [random.uniform(-1, 1) for _ in range(total_weights)]
-        split = input_dim * hidden_size
-        w1 = np.array(weights[:split]).reshape((hidden_size, input_dim))  # Chuyển thành (out_features, in_features)
-        w2 = np.array(weights[split:split + hidden_size * output_dim]).reshape((output_dim, hidden_size))
 
-        # Gán trọng số vào các tầng
-        self.fc1.weight.data = torch.tensor(w1, dtype=torch.float32)
-        self.fc2.weight.data = torch.tensor(w2, dtype=torch.float32)
+        # Khởi tạo trọng số
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_uniform_(m.weight, nonlinearity='relu')
+                nn.init.constant_(m.bias, 0)
 
-        # Gán bias (nếu cần, mặc định là 0 hoặc lấy từ weights)
-        self.fc1.bias.data = torch.zeros(hidden_size, dtype=torch.float32)
-        self.fc2.bias.data = torch.zeros(output_dim, dtype=torch.float32)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
@@ -90,13 +94,13 @@ class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.replay_buffer = PrioritizedReplayBuffer(capacity=10000, alpha=0.6, beta=0.4)
+        self.replay_buffer = PrioritizedReplayBuffer(capacity=50000, alpha=0.6, beta=0.4)
         self.gamma = 0.99
-        self.epsilon = 1.0
-        self.epsilon_min = 0.1  # Tăng từ 0.001
-        self.epsilon_decay = 0.9998  # Tăng từ 0.99
-        self.learning_rate = 0.001  # Giảm từ 0.01
-        self.update_targetnn_rate = 200  # Giảm từ 1000
+        self.epsilon = 0.1  # Giảm từ 1.0
+        self.epsilon_min = 0.01  # Giảm từ 0.1
+        self.epsilon_decay = 0.995  # Giảm từ 0.9998
+        self.learning_rate = 0.001
+        self.update_targetnn_rate = 100  # Giảm từ 200
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.main_network = DQN(state_size, action_size).to(self.device)
         self.target_network = DQN(state_size, action_size).to(self.device)
@@ -130,7 +134,7 @@ class DQNAgent:
             next_q_values = self.target_network(next_state_batch)
             max_next_q_values = torch.max(next_q_values, dim=1)[0]
             target_q = reward_batch + self.gamma * max_next_q_values * (1 - terminal_batch)
-            td_errors = q_values - target_q  # Lỗi TD để cập nhật ưu tiên
+            td_errors = q_values - target_q
 
         loss = (weights * self.loss_fn(q_values, target_q)).mean() 
         loss_value = loss.item()
@@ -156,3 +160,7 @@ class DQNAgent:
         with torch.no_grad():
             q_values = self.main_network(state_tensor)
         return torch.argmax(q_values).item()
+
+    def save_model(self, filename):
+        torch.save(self.main_network.state_dict(), filename)
+        print(f"Model saved to {filename}")

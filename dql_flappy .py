@@ -1,7 +1,8 @@
+
 import pygame
 from pygame.locals import *
 import random
-from dql_agent import DQNAgent
+from dql_agent_noper import DQNAgent
 import numpy as np
 import math
 import os
@@ -10,7 +11,7 @@ import csv
 pygame.init()
 
 clock = pygame.time.Clock()
-fps = 60
+fps = 120
 
 screen_width = 400
 screen_height = 600
@@ -31,12 +32,11 @@ scroll_speed = 4
 flying = False
 game_over = False
 pipe_gap = random.randint(180, 200)
-pipe_height = random.randint(-0, 0)
-pipe_frequency = int(random.randint(1500, 2000) * (60 / fps))  # điều chỉnh theo tốc độ khung hình gốc
-SAVE_MODEL_EVERY_N_EPISODES = 10000 # Ví dụ: lưu checkpoint mỗi 10,000 episodes
-TARGET_EPISODE_TO_SAVE_FINAL = 100000
-MODELS_DIRECTORY = "saved_models_flappy" # Tên thư mục lưu models
-
+pipe_height = random.randint(-100, 100)
+pipe_frequency = int(random.randint(1500, 2000) * (60 / fps))
+SAVE_MODEL_EVERY_N_EPISODES = 1000
+TARGET_EPISODE_TO_SAVE_FINAL = 10000
+MODELS_DIRECTORY = "saved_models_flappy"
 
 last_pipe = -pipe_frequency
 pass_pipe = False
@@ -49,112 +49,10 @@ bg = pygame.image.load('img/bg.png')
 ground_img = pygame.image.load('img/ground.png')
 button_img = pygame.image.load('img/restart.png')
 
-
 #function for outputting text onto the screen
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
-    
-d_mid_pipe = 0
-
-
-class Bird(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        pygame.sprite.Sprite.__init__(self)
-        self.images = []
-        self.index = 0
-        self.counter = 0
-        for num in range (1, 4):
-            img = pygame.image.load(f"img/bird{num}.png")
-            self.images.append(img)
-        self.image = self.images[self.index]
-        self.rect = self.image.get_rect()
-        self.rect.center = [x, y]
-        self.vel = 0
-        self.clicked = False
-        self.score = 0
-        self.jump = False
-        self.individual = None
-        self.mask = pygame.mask.from_surface(self.image)
-        self.passed_pipe = False
-        self.time_alive = 0
-
-    def update(self):   
-        if flying == True:
-            #apply gravity
-            self.vel += 0.6
-            if self.vel > 8:
-                self.vel = 8
-            if self.rect.bottom < 600:
-                self.rect.y += int(self.vel)
-
-        if game_over == False:
-            #jump
-            if self.jump and not self.clicked:
-                self.clicked = True
-                self.vel = -10
-                self.clicked = False
-
-            if not self.jump:
-                self.clicked = False  # cho phép nhảy lần sau nếu điều kiện đúng
-                
-            #handle the animation
-            flap_cooldown = 5
-            self.counter += 1
-            
-            if self.counter > flap_cooldown:
-                self.counter = 0
-                self.index += 1
-                if self.index >= len(self.images):
-                    self.index = 0
-                self.image = self.images[self.index]
-
-            #rotate the bird
-            self.image = pygame.transform.rotate(self.images[self.index], self.vel * -2)
-        else:
-            #point the bird at the ground
-            self.image = pygame.transform.rotate(self.images[self.index], -90)
-
-class Pipe(pygame.sprite.Sprite):
-    def __init__(self, x, y, position):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("img/pipe.png")
-        self.rect = self.image.get_rect()
-        self.base_y = y  # lưu vị trí gốc để dao động
-        self.oscillate_phase = random.uniform(0, 2 * np.pi)
-        self.position = position
-        self.speed = scroll_speed
-        if position == 1:
-            self.image = pygame.transform.flip(self.image, False, True)
-            self.rect.bottomleft = [x, y - int(pipe_gap / 2)]
-        elif position == -1:
-            self.rect.topleft = [x, y + int(pipe_gap / 2)]
-
-    def update(self):
-        self.rect.x -= self.speed
-        # Dao động theo sin
-        # offset = 20 * np.sin(pygame.time.get_ticks() / 500 + self.oscillate_phase)
-        offset = 0
-        if self.position == 1:
-            self.rect.bottom = self.base_y - int(pipe_gap / 2) + offset
-        else:
-            self.rect.top = self.base_y + int(pipe_gap / 2) + offset
-
-        if self.rect.right < 0:
-            self.kill()
-
-pipe_group = pygame.sprite.Group()
-bird_group = pygame.sprite.Group()
-
-bird = Bird(100, screen_height // 2)
-bird_group.add(bird)
-
-state_size = 5
-action_size = 2     
-agent = DQNAgent(state_size, action_size)
-learn_counter = 0
-reward = 0
-loss = 0
 
 def save_tracking_data(tracking_data, filename="training_report.csv"):
     file_exists = os.path.isfile(filename)
@@ -164,6 +62,24 @@ def save_tracking_data(tracking_data, filename="training_report.csv"):
             writer.writerow(["Episode", "Score", "Total Reward", "Time Alive", "Epsilon", "Replay Buffer Size", "Train Steps"])
         for data in tracking_data:
             writer.writerow(data)
+
+# def get_state(pipe_group, bird):
+#     pipes_top = [p for p in pipe_group if p.position == 1]
+#     pipes_bottom = [p for p in pipe_group if p.position == -1]
+
+#     if not pipes_top or not pipes_bottom:
+#         return [bird.rect.centery / screen_height, 1.0, 1.0, 1.0, bird.vel / 8.0]
+
+#     next_top = next((p for p in pipes_top if p.rect.right > bird.rect.left), pipes_top[0])
+#     next_bottom = next((p for p in pipes_bottom if p.rect.right > bird.rect.left), pipes_bottom[0])
+
+#     bird_y = 2* (bird.rect.centery / screen_height)  - 1 # [-1, 1]
+#     dy_bottom = (next_bottom.rect.top - bird.rect.centery) / screen_height  # [-1, 1]
+#     dy_top = (bird.rect.centery - next_top.rect.bottom) / screen_height  # [-1, 1]
+#     dx_pipe = 2 * ((next_top.rect.centerx - bird.rect.centerx) / screen_width)  - 1 # [1, 1]
+#     velocity = bird.vel / 8.0  # [-1.25, 1]
+
+#     return [bird_y, dy_bottom, dy_top, dx_pipe, velocity]
 
 def get_state(pipe_group, bird):
     pipes_top = [p for p in pipe_group if p.position == 1]
@@ -181,30 +97,113 @@ def get_state(pipe_group, bird):
     dy_bottom = next_bottom.rect.top - bird.rect.centery
     dy_top = bird.rect.centery - next_top.rect.bottom
     dx_pipe = next_top.rect.centerx - bird.rect.centerx
+
     velocity = bird.vel
 
     return [bird_y, dy_bottom, dy_top, dx_pipe, velocity]
 
+class Bird(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.images = []
+        self.index = 0
+        self.counter = 0
+        for num in range(1, 4):
+            img = pygame.image.load(f"img/bird{num}.png")
+            self.images.append(img)
+        self.image = self.images[self.index]
+        self.rect = self.image.get_rect()
+        self.rect.center = [x, y]
+        self.vel = 0
+        self.clicked = False
+        self.score = 0
+        self.jump = False
+        self.individual = None
+        self.mask = pygame.mask.from_surface(self.image)
+        self.passed_pipe = False
+        self.time_alive = 0
+
+    def update(self):   
+        if flying == True:
+            self.vel += 0.6
+            if self.vel > 8:
+                self.vel = 8
+            if self.rect.bottom < 600:
+                self.rect.y += int(self.vel)
+
+        if game_over == False:
+            if self.jump and not self.clicked:
+                self.clicked = True
+                self.vel = -10
+                self.clicked = False
+            if not self.jump:
+                self.clicked = False
+                
+            flap_cooldown = 5
+            self.counter += 1
+            if self.counter > flap_cooldown:
+                self.counter = 0
+                self.index += 1
+                if self.index >= len(self.images):
+                    self.index = 0
+                self.image = self.images[self.index]
+
+            self.image = pygame.transform.rotate(self.images[self.index], self.vel * -2)
+        else:
+            self.image = pygame.transform.rotate(self.images[self.index], -90)
+
+class Pipe(pygame.sprite.Sprite):
+    def __init__(self, x, y, position):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("img/pipe.png")
+        self.rect = self.image.get_rect()
+        self.base_y = y
+        self.oscillate_phase = random.uniform(0, 2 * np.pi)
+        self.position = position
+        self.speed = scroll_speed
+        if position == 1:
+            self.image = pygame.transform.flip(self.image, False, True)
+            self.rect.bottomleft = [x, y - int(pipe_gap / 2)]
+        elif position == -1:
+            self.rect.topleft = [x, y + int(pipe_gap / 2)]
+
+    def update(self):
+        self.rect.x -= self.speed
+        offset = 0
+        if self.position == 1:
+            self.rect.bottom = self.base_y - int(pipe_gap / 2) + offset
+        else:
+            self.rect.top = self.base_y + int(pipe_gap / 2) + offset
+        if self.rect.right < 0:
+            self.kill()
+
+pipe_group = pygame.sprite.Group()
+bird_group = pygame.sprite.Group()
+
+bird = Bird(100, screen_height // 2)
+bird_group.add(bird)
+
+state_size = 5
+action_size = 2     
+agent = DQNAgent(state_size, action_size)
+learn_counter = 0
+reward = 0
+loss = 0
+
 run = True
 while run:
-    
     clock.tick(fps)
-    #draw background
     screen.blit(bg, (0,0))
-
     pipe_group.draw(screen)
     bird_group.draw(screen)
-
-    #draw and scroll the ground
     screen.blit(ground_img, (ground_scroll, 600))
 
     state = np.array(get_state(pipe_group, bird), dtype=np.float32)
     action = agent.make_decision(state)
     bird.jump = (action == 1)
-    reward = 0
+    reward = 0.1  # Phần thưởng liên tục
     total_reward += reward
-    
-    #check the score
+
     if len(pipe_group) > 0:
         # for p in pipe_group.sprites():
         #     if p.rect.left > bird.rect.left:
@@ -212,10 +211,9 @@ while run:
         #         break
         # #sua lai logic phan nay
         # mid_gap = (pipe_next.rect.midtop[0], pipe_next.rect.midtop[1] - pipe_gap / 2)
-        # best_point = (pipe_next.rect.topleft[0] - 50, pipe_next.rect.topleft[1] + 50)
-        # distance = math.dist(bird.rect.center, best_point)
+        # distance = math.dist(bird.rect.center, mid_gap)
         # # distance = distance if bird.rect.center[0] >= mid_gap[0] else - distance
-        # pygame.draw.line(screen, (255, 0, 0), bird.rect.center, best_point, 2)
+        # pygame.draw.line(screen, (255, 0, 0), bird.rect.center, mid_gap, 2)
         # reward += 10 / (distance + 1)
         # total_reward += reward
         pipe = pipe_group.sprites()[0]
@@ -226,15 +224,14 @@ while run:
             reward = 100
             total_reward += reward
             bird.passed_pipe = False
-    
+
     draw_text(str(bird.score), font, white, int(screen_width / 2), 20)
 
     if flying == True and game_over == False:
         time_alive += 1 
-        #generate new pipes
         time_now = pygame.time.get_ticks()
         if time_now - last_pipe > pipe_frequency:
-            pipe_height = random.randint(-200, 100)
+            pipe_height = random.randint(-100, 100)
             btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
             top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
             pipe_group.add(btm_pipe)
@@ -249,7 +246,6 @@ while run:
             ground_scroll = 0
     
     next_state = np.array(get_state(pipe_group, bird), dtype=np.float32)
-    #look for collision
     if pygame.sprite.spritecollide(bird, pipe_group, False, pygame.sprite.collide_mask):
         reward = -100
         total_reward += reward
@@ -262,41 +258,39 @@ while run:
         game_over = True
         flying = False
         
-    
     agent.save_experience(state, action, reward, next_state, game_over)
     
-    if learn_counter % 20 == 0:
-        loss =  agent.train_main_network(128)
+    if learn_counter % 10 == 0:  # Tăng tần suất huấn luyện
+        loss = agent.train_main_network(256)  # Tăng batch size
+        # loss_value = 0
+        # if loss:
+        #     loss_value = loss.item()
     learn_counter += 1
     
     if game_over:
         episode += 1
-        # Lưu dữ liệu tracking
         tracking_data.append([
             episode,
             bird.score,
             total_reward,
             time_alive,
+            loss,
             agent.epsilon,
             len(agent.replay_buffer),
             agent.train_steps
         ])
-        # Ghi dữ liệu vào CSV mỗi 10 episode
         if episode % 10 == 0:
             save_tracking_data(tracking_data)
-            tracking_data = []  # Xóa danh sách sau khi ghi
-            print(f"Episode {episode}: Score={bird.score}, Total Reward={total_reward}, Time Alive={time_alive}, Loss={loss}, Epsilon={agent.epsilon:.3f}")
+            tracking_data = []
+            print(f"Episode {episode}: Score={bird.score}, Total Reward={total_reward}, Time Alive={time_alive}, Loss={loss:.4f}, Epsilon={agent.epsilon:.3f}")
         
         if not os.path.exists(MODELS_DIRECTORY):
             os.makedirs(MODELS_DIRECTORY)
 
-        # Lưu model checkpoint định kỳ
         if episode % SAVE_MODEL_EVERY_N_EPISODES == 0 and episode > 0:
             checkpoint_filename = os.path.join(MODELS_DIRECTORY, f"flappy_dqn_episode_{episode}.pth")
             agent.save_model(checkpoint_filename)
-            # agent.save_model đã có print, không cần print thêm ở đây trừ khi muốn thông báo khác
 
-        # Lưu model khi đạt 100,000 episodes
         if episode == TARGET_EPISODE_TO_SAVE_FINAL:
             final_filename = os.path.join(MODELS_DIRECTORY, f"flappy_dqn_episode_{TARGET_EPISODE_TO_SAVE_FINAL}_final.pth")
             agent.save_model(final_filename)
@@ -309,8 +303,6 @@ while run:
         pipe_group.empty()
         game_over = False
         flying = True
-    
-    # print(f"score: {bird.score}, epsilon: {agent.epsilon:.3f}, memory: {len(agent.memory)}, reward: {reward}")
     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
