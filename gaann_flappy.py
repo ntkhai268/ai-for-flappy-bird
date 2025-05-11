@@ -179,28 +179,11 @@ def get_state(pipe_group, bird):
 
 	# Nếu chưa có đủ pipe → trả về mặc định
     if not pipes_top or not pipes_bottom:
-        return [bird.rect.centery, 0, 0, screen_width, bird.vel] # trường hợp 6 đầu vào
-        # return [bird.rect.centery, screen_width, bird.vel] # trường hợp 4 đầu vào
-        # return [bird.rect.centery, 0, 0, screen_width, 0, bird.vel] # trường hợp 9 đầu vào
+        return [bird.rect.centery, 600, 600, 400, bird.vel] # trường hợp 6 đầu vào
 
     # Ống gần nhất
     next_top = next((p for p in pipes_top if p.rect.right > bird.rect.left), pipes_top[0])
     next_bottom = next((p for p in pipes_bottom if p.rect.right > bird.rect.left), pipes_bottom[0])
-    
-    # mid_pipe_y = (next_top.rect.bottom + next_bottom.rect.top) // 2
-    # mid_pipe_x = next_top.rect.centerx
-
-	# # Line: chim đến tâm khe ống
-    # pygame.draw.line(screen, (255, 0, 0), bird.rect.center, (mid_pipe_x, mid_pipe_y), 1)
-
-	# # Line: chim đến ống trên
-    # pygame.draw.line(screen, (0, 255, 0), bird.rect.center, next_top.rect.midbottom, 1)
-
-	# # Line: chim đến ống dưới
-    # pygame.draw.line(screen, (0, 0, 255), bird.rect.center, next_bottom.rect.midtop, 1)
-
-	# # Optional: highlight center line của khe
-    # pygame.draw.line(screen, (255, 255, 0), (mid_pipe_x, next_top.rect.bottom), (mid_pipe_x, next_bottom.rect.top), 1)
 
     bird_y = bird.rect.centery
     dy_bottom = next_bottom.rect.top - bird.rect.centery
@@ -210,26 +193,7 @@ def get_state(pipe_group, bird):
     d = d if (bird.rect.centery - (next_top.rect.bottom + next_bottom.rect.top) / 2) > 0 else -d
     velocity = bird.vel
 
-    if len(pipes_top) < 2 or len(pipes_bottom) < 2:
-        return [bird_y, dy_bottom, dy_top, dx_pipe, velocity]  # trường hợp 6
-        # return [bird_y, d, velocity]  # trường hợp 4
-        # return [bird_y, dy_bottom, dy_top, dx_pipe, 0, velocity] # trường hợp 9 đầu vào 
-
-    # Ống thứ hai
-    second_top = next((p for p in pipes_top if p.rect.right > next_top.rect.right), next_top)
-    second_bottom = next((p for p in pipes_bottom if p.rect.right > next_bottom.rect.right), next_bottom)
-
-    # Đặc trưng y1: khoảng cách dọc giữa chim và ống thứ hai
-    dy_bottom_1 = second_bottom.rect.top - bird.rect.centery
-    dy_top_1 = bird.rect.centery - second_top.rect.bottom
-    dx_pipe_1 = second_top.rect.centerx - bird.rect.centerx
-    
-    dy_next_center = ((second_bottom.rect.top + second_top.rect.bottom) / 2) - bird.rect.centery
-
-
     return [bird_y, dy_bottom, dy_top, dx_pipe, velocity]
-    # return [bird_y, d, velocity]  # trường hợp 4
-    # return [bird_y, dy_bottom, dy_top, dx_pipe, dy_next_center, velocity] # trường hợp 7
 
 run = True
 while run:
@@ -254,7 +218,6 @@ while run:
 			if bird_group.sprites()[i].passed_pipe == True:
 				if bird_group.sprites()[i].rect.left > pipe_group.sprites()[0].rect.right:
 					bird_group.sprites()[i].score += 1
-					# bird_group.sprites()[i].individual.evaluate_fitness(bird_group.sprites()[i].score)
 					bird_group.sprites()[i].passed_pipe = False
 
 	for i in range(len(bird_group)):
