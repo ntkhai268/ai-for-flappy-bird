@@ -1,9 +1,10 @@
 import pygame
 from pygame.locals import *
 import random
-from population import *
-from individual import *
+from agent.population import *
+from agent.individual import *
 from math import sqrt
+import os
 
 pygame.init()
 
@@ -39,11 +40,10 @@ pass_pipe = False
 generation = 0
 max_score_list = []
 
-
 #load images
-bg = pygame.image.load('img/bg.png')
-ground_img = pygame.image.load('img/ground.png')
-button_img = pygame.image.load('img/restart.png')
+bg = pygame.image.load('assets/img/bg.png')
+ground_img = pygame.image.load('assets/img/ground.png')
+button_img = pygame.image.load('assets/img/restart.png')
 
 
 #function for outputting text onto the screen
@@ -59,6 +59,16 @@ def reset_game(population):
 	time_alive = 0
 	pipe_group.empty()
 	population.evolve()
+	# Sau khi population tiến hóa xong
+	if not os.path.exists("saved_models_gaann"):
+		os.makedirs("saved_models_gaann")
+
+	best_individual = max(population.individuals, key=lambda ind: ind.fitness)
+	with open(f"saved_models_gaann/gen_{generation}_fitness_{int(best_individual.fitness)}.txt", "w") as f:
+		for w in best_individual.genome:
+			f.write(f"{w}\n")
+	print(f"✅ Đã lưu mô hình tốt nhất của Gen {generation} với fitness = {int(best_individual.fitness)}")
+
 	for i in range(size_population):
 		individual = population.individuals[i]
 		bird = Bird(100, int(screen_height / random.randint(1, 10)))
@@ -77,7 +87,7 @@ class Bird(pygame.sprite.Sprite):
 		self.index = 0
 		self.counter = 0
 		for num in range (1, 4):
-			img = pygame.image.load(f"img/bird{num}.png")
+			img = pygame.image.load(f"assets/img/bird{num}.png")
 			self.images.append(img)
 		self.image = self.images[self.index]
 		self.rect = self.image.get_rect()
@@ -132,7 +142,7 @@ class Bird(pygame.sprite.Sprite):
 class Pipe(pygame.sprite.Sprite):
 	def __init__(self, x, y, position):
 		pygame.sprite.Sprite.__init__(self)
-		self.image = pygame.image.load("img/pipe.png")
+		self.image = pygame.image.load("assets/img/pipe.png")
 		self.rect = self.image.get_rect()
 		self.base_y = y  # lưu vị trí gốc để dao động
 		self.oscillate_phase = random.uniform(0, 2 * np.pi)

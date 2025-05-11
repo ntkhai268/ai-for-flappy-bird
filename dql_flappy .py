@@ -2,7 +2,7 @@
 import pygame
 from pygame.locals import *
 import random
-from dql_agent_noper import DQNAgent
+from agent.dql_agent_noper import DQNAgent
 import numpy as np
 import math
 import os
@@ -45,16 +45,16 @@ total_reward = 0
 tracking_data = []
 
 #load images
-bg = pygame.image.load('img/bg.png')
-ground_img = pygame.image.load('img/ground.png')
-button_img = pygame.image.load('img/restart.png')
+bg = pygame.image.load('assets/img/bg.png')
+ground_img = pygame.image.load('assets/img/ground.png')
+button_img = pygame.image.load('assets/img/restart.png')
 
 #function for outputting text onto the screen
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
 
-def save_tracking_data(tracking_data, filename="training_report.csv"):
+def save_tracking_data(tracking_data, filename="training_report_dq;.csv"):
     file_exists = os.path.isfile(filename)
     with open(filename, mode='a', newline='') as file:
         writer = csv.writer(file)
@@ -109,7 +109,7 @@ class Bird(pygame.sprite.Sprite):
         self.index = 0
         self.counter = 0
         for num in range(1, 4):
-            img = pygame.image.load(f"img/bird{num}.png")
+            img = pygame.image.load(f"assets/img/bird{num}.png")
             self.images.append(img)
         self.image = self.images[self.index]
         self.rect = self.image.get_rect()
@@ -155,7 +155,7 @@ class Bird(pygame.sprite.Sprite):
 class Pipe(pygame.sprite.Sprite):
     def __init__(self, x, y, position):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("img/pipe.png")
+        self.image = pygame.image.load("assets/img/pipe.png")
         self.rect = self.image.get_rect()
         self.base_y = y
         self.oscillate_phase = random.uniform(0, 2 * np.pi)

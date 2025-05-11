@@ -1,4 +1,4 @@
-from individual import *
+from agent.individual import *
 import random
 
 class Population:

@@ -1,5 +1,5 @@
 import random
-from neural_network import *  # Giả sử bạn đã có NeuralNetwork như ở trên
+from agent.neural_network import *  # Giả sử bạn đã có NeuralNetwork như ở trên
 
 class Individual:
     def __init__(self, genome=None, hidden_size=5):
