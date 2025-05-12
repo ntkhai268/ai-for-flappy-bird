@@ -31,7 +31,7 @@ flying = False
 game_over = False
 pipe_gap = random.randint(180, 200)
 pipe_height = random.randint(-100, 100)
-pipe_frequency = int(random.randint(800, 1200) * (60 / fps))  # điều chỉnh theo tốc độ khung hình gốc
+pipe_frequency = int(random.randint(1500, 2000) * (60 / fps))
 
 last_pipe = pygame.time.get_ticks() - pipe_frequency
 max_score = 0

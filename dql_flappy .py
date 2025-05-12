@@ -63,24 +63,6 @@ def save_tracking_data(tracking_data, filename="training_report_dq;.csv"):
         for data in tracking_data:
             writer.writerow(data)
 
-# def get_state(pipe_group, bird):
-#     pipes_top = [p for p in pipe_group if p.position == 1]
-#     pipes_bottom = [p for p in pipe_group if p.position == -1]
-
-#     if not pipes_top or not pipes_bottom:
-#         return [bird.rect.centery / screen_height, 1.0, 1.0, 1.0, bird.vel / 8.0]
-
-#     next_top = next((p for p in pipes_top if p.rect.right > bird.rect.left), pipes_top[0])
-#     next_bottom = next((p for p in pipes_bottom if p.rect.right > bird.rect.left), pipes_bottom[0])
-
-#     bird_y = 2* (bird.rect.centery / screen_height)  - 1 # [-1, 1]
-#     dy_bottom = (next_bottom.rect.top - bird.rect.centery) / screen_height  # [-1, 1]
-#     dy_top = (bird.rect.centery - next_top.rect.bottom) / screen_height  # [-1, 1]
-#     dx_pipe = 2 * ((next_top.rect.centerx - bird.rect.centerx) / screen_width)  - 1 # [1, 1]
-#     velocity = bird.vel / 8.0  # [-1.25, 1]
-
-#     return [bird_y, dy_bottom, dy_top, dx_pipe, velocity]
-
 def get_state(pipe_group, bird):
     pipes_top = [p for p in pipe_group if p.position == 1]
     pipes_bottom = [p for p in pipe_group if p.position == -1]
@@ -205,17 +187,6 @@ while run:
     total_reward += reward
 
     if len(pipe_group) > 0:
-        # for p in pipe_group.sprites():
-        #     if p.rect.left > bird.rect.left:
-        #         pipe_next = p
-        #         break
-        # #sua lai logic phan nay
-        # mid_gap = (pipe_next.rect.midtop[0], pipe_next.rect.midtop[1] - pipe_gap / 2)
-        # distance = math.dist(bird.rect.center, mid_gap)
-        # # distance = distance if bird.rect.center[0] >= mid_gap[0] else - distance
-        # pygame.draw.line(screen, (255, 0, 0), bird.rect.center, mid_gap, 2)
-        # reward += 10 / (distance + 1)
-        # total_reward += reward
         pipe = pipe_group.sprites()[0]
         if bird.rect.left > pipe.rect.left and bird.rect.right < pipe.rect.right and not bird.passed_pipe:
             bird.passed_pipe = True

@@ -25,13 +25,17 @@ time_alive = 0
 scroll_speed = 4
 flying = False
 game_over = False
-pipe_gap = random.randint(180, 200)
+pipe_gap = random.randint(200, 230)
 pipe_height = random.randint(-100, 100)
-pipe_frequency = int(random.randint(1500, 2000) * (60 / fps))
+pipe_frequency = int(random.randint(1800, 2000) * (60 / fps))
 last_pipe = -pipe_frequency
 
 episode = 0
 total_reward = 0
+game_id = 1
+ga_win = 0
+dql_win = 0
+
 
 bg = pygame.image.load('assets/img/bg.png')
 ground_img = pygame.image.load('assets/img/ground.png')
@@ -44,9 +48,22 @@ agent.main_network.eval()
 agent.epsilon = 0.0
 
 # Load genome GA + ANN
-with open("saved_models_gaann/gen_98_fitness_14641.txt", "r") as f:
+with open("models/saved_models_gaann/gen_98_fitness_14641.txt", "r") as f:
     genome = [float(w.strip()) for w in f.readlines()]
 ga_individual = Individual(genome=genome)
+
+def log_score(game_id, ga_score, dql_score):
+    filepath = "test_scores_log.csv"
+    write_header = not os.path.exists(filepath) or os.stat(filepath).st_size == 0
+    with open(filepath, "a") as f:
+        if write_header:
+            f.write("Game,GA Score,DQL Score\n")
+        f.write(f"{game_id},{ga_score},{dql_score}\n")
+        
+def draw_text(text, font, text_col, x, y):
+	img = font.render(text, True, text_col)
+	screen.blit(img, (x, y))
+
 
 def get_state(pipe_group, bird):
     pipes_top = [p for p in pipe_group if p.position == 1]
@@ -150,7 +167,6 @@ while run:
             action = controller.make_decision(state)
             bird.jump = (action == 1)
 
-
     if flying and not game_over:
         time_now = pygame.time.get_ticks()
         if time_now - last_pipe > pipe_frequency:
@@ -185,10 +201,18 @@ while run:
         game_over = True
     # draw_text(f"GA: {bird_ga.score}  |  DQL: {bird_dql.score}", font, white, 40, 20)
 
+    draw_text(f"GA Score: {bird_ga.score} | DQL Score: {bird_dql.score}", pygame.font.SysFont('Arial', 24), white, 10, 50)
+    
+    
     if game_over:
         print(f"Game Over → GA Score: {bird_ga.score} | DQL Score: {bird_dql.score}")
-
-        # Reset chim
+        log_score(ga_score=bird_ga.score, dql_score=bird_dql.score, game_id=game_id)
+        game_id += 1
+        if bird_ga.score > bird_dql.score:
+            ga_win += 1
+        else:
+            dql_win += 1
+        # Reset chim:
         bird_ga.rect.center = [100, screen_height // 2 - 20]
         bird_dql.rect.center = [100, screen_height // 2 + 20]
         bird_ga.vel = 0
@@ -206,7 +230,8 @@ while run:
         game_over = False
         flying = True
 
-
+    draw_text(f"Tỉ số: GA {ga_win} - {dql_win} DQL", pygame.font.SysFont('Arial', 24), white, 10, 110)
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
